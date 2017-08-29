@@ -19,7 +19,7 @@ The 3 columns of the input CSV are:
 * `n`: The number of nodes in the gossip group/section/network.
 * `k`: The number of nodes that vote on a single rumour (k should be > n/2).
 * `voting_steps`: The number of steps during which the `k` nodes cast their votes. Roughly
-  `k/voting_steps` nodes vote for the rumour in each of the first `k` rounds.
+  `k / voting_steps` nodes vote for the rumour in each of the first `voting_steps` rounds.
 
 The program will run a simulation for each `(n, k, voting_steps)` triple, and write a row to an
 output CSV file.
