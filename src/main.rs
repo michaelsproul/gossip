@@ -26,6 +26,7 @@ struct SimulationResult {
     voting_steps: usize,
     num_iterations: usize,
     num_exchanges: usize,
+    num_vote_exchanges: usize,
     average_votes_held: f64,
 }
 
@@ -147,6 +148,11 @@ fn add_updates(updates: &mut BTreeMap<usize, VoteDiff>, node: usize, diff: VoteD
     }
 }
 
+/// Count the number of individual votes in a given `VoteDiff`.
+fn num_votes_in_update(diff: &VoteDiff) -> usize {
+    diff.values().map(|voters| voters.len()).sum()
+}
+
 fn construct_voting_schedule(k: usize, voting_steps: usize) -> BTreeMap<usize, usize> {
     let per_step = k / voting_steps;
 
@@ -173,6 +179,7 @@ fn run_simulation<R: Rng>(params: &Params, rng: &mut R) -> SimulationResult {
     // Statistics.
     let mut num_iterations = 0;
     let mut num_exchanges = 0;
+    let mut num_vote_exchanges = 0;
 
     // Keep running while any node lacks a quorum.
     while !nodes.iter().all(|node| node.has_quorum_for(0)) {
@@ -198,13 +205,15 @@ fn run_simulation<R: Rng>(params: &Params, rng: &mut R) -> SimulationResult {
             let (our_updates, their_updates) = compute_push_pull_gossip(node, partner);
 
             if let Some(our_updates) = our_updates {
-                add_updates(&mut updates, node_id, our_updates);
                 num_exchanges += 1;
+                num_vote_exchanges += num_votes_in_update(&our_updates);
+                add_updates(&mut updates, node_id, our_updates);
             }
 
             if let Some(their_updates) = their_updates {
-                add_updates(&mut updates, partner_id, their_updates);
                 num_exchanges += 1;
+                num_vote_exchanges += num_votes_in_update(&their_updates);
+                add_updates(&mut updates, partner_id, their_updates);
             }
         }
 
@@ -226,6 +235,7 @@ fn run_simulation<R: Rng>(params: &Params, rng: &mut R) -> SimulationResult {
         voting_steps: params.voting_steps,
         num_iterations,
         num_exchanges,
+        num_vote_exchanges,
         average_votes_held,
     }
 }
