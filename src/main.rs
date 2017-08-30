@@ -24,7 +24,7 @@ struct SimulationResult {
     n: usize,
     k: usize,
     voting_steps: usize,
-    num_iterations: usize,
+    num_iterations: f64,
     num_exchanges: usize,
     num_vote_exchanges: usize,
     average_votes_held: f64,
@@ -167,6 +167,24 @@ fn construct_voting_schedule(k: usize, voting_steps: usize) -> BTreeMap<usize, u
     }).collect()
 }
 
+fn average_results(params: &Params, results: Vec<SimulationResult>) -> SimulationResult {
+    let result_count = results.len();
+    let num_iterations = results.iter().map(|r| r.num_iterations).sum::<f64>() / result_count as f64;
+    let num_exchanges = results.iter().map(|r| r.num_exchanges).sum::<usize>() / result_count;
+    let num_vote_exchanges = results.iter().map(|r| r.num_vote_exchanges).sum::<usize>() / result_count;
+    let average_votes_held = results.iter().map(|r| r.average_votes_held).sum::<f64>() / result_count as f64;
+
+    SimulationResult {
+        n: params.n,
+        k: params.k,
+        voting_steps: params.voting_steps,
+        num_iterations,
+        num_exchanges,
+        num_vote_exchanges,
+        average_votes_held,
+    }
+}
+
 fn run_simulation<R: Rng>(params: &Params, rng: &mut R) -> SimulationResult {
     let n = params.n;
     let k = params.k;
@@ -233,7 +251,7 @@ fn run_simulation<R: Rng>(params: &Params, rng: &mut R) -> SimulationResult {
         n,
         k,
         voting_steps: params.voting_steps,
-        num_iterations,
+        num_iterations: num_iterations as f64,
         num_exchanges,
         num_vote_exchanges,
         average_votes_held,
@@ -273,13 +291,15 @@ fn main_with_result() -> Result<(), Box<Error>> {
 
     let input_file = &args[1];
     let output_file = &args[2];
+    let repetitions = 20;
 
     let all_params = read_params(input_file)?;
     let mut rng = weak_rng();
 
     let results: Vec<_> = all_params.iter()
         .map(|params| {
-            run_simulation(params, &mut rng)
+            let sim_results = (0..repetitions).map(|_| run_simulation(params, &mut rng)).collect();
+            average_results(params, sim_results)
         })
         .collect();
 
